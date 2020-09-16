@@ -13,8 +13,27 @@ def beta_pdf(a,b,x):
 
     Returns:
         numpy.ndarray: List of Beta probabilities for the given numbers
+    """ 
+    # return x**(a-1) * (1-x)**(b-1) * math.gamma(a+b) / math.gamma(a) / math.gamma(b)
+    ln_ans = (a-1) * np.log(x) + (b-1) * np.log(1-x) + np.sum(np.log(np.arange(1,a+b))) - np.sum(np.log(np.arange(1,a))) - np.sum(np.log(np.arange(1,b))) 
+    return np.exp(ln_ans)
+
+
+def kl_div(x,y):
+    """KL Divergence between 2 bernoulli  distributions
+
+    Args:
+        x (float): mean of first dist.
+        y (float): mean of second dist.
+
+    Returns:
+        float: KL Divergence
     """
-    return x**(a-1) * (1-x)**(b-1) * math.gamma(a+b) / math.gamma(a) / math.gamma(b)
+    if x == 0:
+        return np.log(1/(1-y))
+    else:
+        return x*np.log(x/y) + (1-x)*np.log((1-x)/(1-y))
+    
 
 def parser():
     """Command Line Parser
