@@ -2,99 +2,7 @@ import numpy as np
 import matplotlib
 import os
 import sys
-from utils import kl_div, beta_pdf
-
-class BanditArm(object):
-    """A single Bandit Arm"""
-    def __init__(self,prob):
-        """
-        Args:
-            prob (float):  Mean reward for the bandit
-        """
-        self.prob = prob
-        self.succ = 0
-        self.fail = 0
-
-    def pull(self):
-        """Pulling the arm
-
-        Returns:
-            int: Reward obtained on pulling the arm
-        """
-        reward = np.random.binomial(size=1,n=1,p=self.prob)[0]
-        if reward == 0:
-            self.fail+=1
-        else:
-            self.succ+=1
-        return reward
-
-    def get_emperical_mean(self):
-        """Emperical mean of the arm
-
-        Returns:
-            float: Emperical mean
-        """
-        return self.succ/(self.succ+self.fail)
-
-    def get_ucb(self,time):
-        """Returns the ucb value for the arm
-
-        Args:
-            time (int): Time in the experiment
-
-        Returns:
-            float: ucb value for the arm
-        """
-        emp_mean = self.get_emperical_mean()
-        return emp_mean + np.sqrt(2*np.log(time)/(self.succ+self.fail))
-
-    def get_kl_ucb(self,time):
-        """Returns the kl-ucb value for the arm
-
-        Args:
-            time (int): Time in the experiment
-
-        Returns:
-            float: kl-ucb value for the arm
-        """
-        emp_mean = self.get_emperical_mean()
-        low = emp_mean
-        high = 1
-        while(True):
-            mid = (low+high)/2
-            if np.abs(low-high) < 1e-2:
-                break
-            lhs = kl_div(emp_mean,mid)*(self.succ+self.fail)
-            rhs = np.log(time) + 3*np.log(np.log(time))
-            if lhs <= rhs:
-                low = mid
-            else:
-                high = mid
-            
-        return mid
-
-    def get_thompson_sample(self):
-        """Draw Thompson sample from the arm
-
-        Returns:
-            float: Thompson sample for mean reward
-        """
-        return np.random.beta(self.succ+1,self.fail+1)
-
-    def get_thompson_hint_sample(self,hints):
-        """Draw Thompson sample from the arm using hints 
-
-        Args:
-            hints (numpy.ndarray): Mean rewards for the arms in sorted order 
-
-        Returns:
-            float: Sample for mean reward
-        """
-        # x = np.random.beta(self.succ+1,self.fail+1)
-        # return hints[np.argmin(np.abs(hints-x))]
-        hint_weights = beta_pdf(self.succ+1, self.fail+1, hints)
-        hint_weights = hint_weights/np.sum(hint_weights)
-        return np.random.choice(hints,p=hint_weights)
+from utils import kl_div, beta_pdf, kl_div_array
 
 
 class MultiArmedBandit(object):
@@ -104,10 +12,43 @@ class MultiArmedBandit(object):
         Args:
             p_list (List[float]): Mean reward for each arm
         """
+        self.n = len(p_list)
         self.p_list = np.array(p_list)
-        self.arms = []
-        for prob in p_list:
-            self.arms.append(BanditArm(prob))
+        self.succ = np.zeros(self.n)
+        self.fail = np.zeros(self.n)
+        self.hint = None
+        self.hint_weights = None
+
+    def set_hint(self,hint):
+        """Set the hint for Thompson Sampling with hint
+
+        Args:
+            hint (numpy.ndarray): Sorted list of true means
+        """
+        self.hint = hint
+        self.hint_weights = np.ones((self.n,self.n))
+
+    def pull(self,i):
+        """Pulling an arm
+
+        Args:
+            i (int): Index of the arm to be pulled
+
+        Returns:
+            float: Reward for the pull
+        """
+        reward = np.random.binomial(size=1,n=1,p=self.p_list[i])[0]
+        if reward == 0:
+            self.fail[i]+=1
+            if self.hint is not None:
+                self.hint_weights[i] = self.hint_weights[i] * (1-self.hint) * (self.succ[i]+self.fail[i]+1)/self.fail[i] 
+
+        else:
+            self.succ[i]+=1
+            if self.hint is not None:
+                self.hint_weights[i] = self.hint_weights[i] * self.hint * (self.succ[i]+self.fail[i]+1)/self.succ[i]
+        return reward
+
     
     def get_max_emperical_mean(self):
         """Returns the arm with highest emperical mean
@@ -115,9 +56,7 @@ class MultiArmedBandit(object):
         Returns:
             int: Arm index
         """
-        emperical_means = []
-        for arm in self.arms:
-            emperical_means.append(arm.get_emperical_mean())
+        emperical_means = self.succ/(self.succ+self.fail)
         return np.argmax(emperical_means)
 
 
@@ -141,24 +80,51 @@ class MultiArmedBandit(object):
         Returns:
             int: Arm index
         """
-        ucbs = []
-        for arm in self.arms:
-            ucbs.append(arm.get_ucb(time))
+        emperical_means = self.succ/(self.succ+self.fail)
+        ucbs = emperical_means + np.sqrt(2*np.log(time)/(self.succ+self.fail))
         return np.argmax(ucbs)
 
-    def get_max_kl_ucb(self,time):
+    def get_max_kl_ucb(self,time,c,precision):
         """Returns the arm with maximum kl_ucb
 
         Args:
-            time (time): Time in the experiment
+            time (int): Time in the experiment
+            c (int): Value of c in the KL-UCB equation
+            precision(float): Precision for Binary Search 
 
         Returns:
             int: Arm index
         """
-        kl_ucbs = []
-        for arm in self.arms:
-            kl_ucbs.append(arm.get_kl_ucb(time))
-        return np.argmax(kl_ucbs)
+        emperical_means = self.succ/(self.succ+self.fail)
+        low = emperical_means.copy()
+        high = np.ones(self.n)
+        rhs = np.log(time)
+        mid = np.ones(self.n)
+        lhs = np.ones(self.n)
+        while not all(np.abs(low-high)< precision):
+            cond = (np.abs(high-low)>=precision)
+            mid[cond] = (low[cond]+high[cond])/2
+            lhs[cond] = (self.succ[cond] + self.fail[cond])*kl_div_array(emperical_means[cond],mid[cond])
+            low[ (lhs<=rhs) * cond ] = mid[(lhs<=rhs) * cond]
+            high[(lhs>rhs) * cond ] = mid[(lhs>rhs) * cond]
+        return np.argmax(low)
+
+        # emp_mean = self.get_emperical_mean()
+        # low = emp_mean
+        # high = 1
+        # while(True):
+        #     mid = (low+high)/2
+        #     if np.abs(low-high) < 1e-2:
+        #         break
+        #     lhs = kl_div(emp_mean,mid)*(self.succ+self.fail)
+        #     rhs = np.log(time) + 3*np.log(np.log(time))
+        #     if lhs <= rhs:
+        #         low = mid
+        #     else:
+        #         high = mid
+            
+        # return mid
+        
 
 
     def get_max_thompson_sample(self):
@@ -167,12 +133,10 @@ class MultiArmedBandit(object):
         Returns:
             int: Arm index
         """
-        thompson_samples = []
-        for arm in self.arms:
-            thompson_samples.append(arm.get_thompson_sample())
+        thompson_samples = np.random.beta(self.succ+1,self.fail+1)
         return np.argmax(thompson_samples)
 
-    def get_max_thompson_hint_sample(self,hint):
+    def get_max_thompson_hint_sample(self):
         """Returns the arm with maximum sampled mean using Thompson Sampling with hint
 
         Args:
@@ -181,10 +145,8 @@ class MultiArmedBandit(object):
         Returns:
             int: Arm index
         """
-        thompson_hint_samples = []
-        for arm in self.arms:
-            thompson_hint_samples.append(arm.get_thompson_hint_sample(hint))
-        return np.argmax(thompson_hint_samples)
+        max_hint_index = np.argmax(self.hint)
+        return np.argmax(self.hint_weights[:,max_hint_index])
 
 
     

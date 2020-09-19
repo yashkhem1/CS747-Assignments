@@ -29,10 +29,30 @@ def kl_div(x,y):
     Returns:
         float: KL Divergence
     """
+    if y == 1:
+        return np.inf
     if x == 0:
         return np.log(1/(1-y))
     else:
         return x*np.log(x/y) + (1-x)*np.log((1-x)/(1-y))
+
+def kl_div_array(x,y):
+    """Bernoulli KL Divergence between 2 lists
+
+    Args:
+        x (numpy.ndarray): List of means of first dist.
+        y (numpy.ndarray): List of means of second dist.
+
+    Returns:
+        numpy.ndarray: List of KL Divergences
+    """
+    kl_div = np.zeros(len(x))
+    kl_div[y==1] = np.inf
+    cond1 = (x==0) * (y!=1)
+    kl_div[cond1] = np.log(1/(1-y[cond1]))
+    cond2 = (x!=0) * (y!=1)
+    kl_div[cond2] = x[cond2]*np.log(x[cond2]/y[cond2]) + (1-x[cond2])*np.log((1-x[cond2])/(1-y[cond2]))
+    return kl_div
     
 
 def parser():
