@@ -110,9 +110,6 @@ def thompson_sampling(mab, horizons):
     cum_reward = 0
     regrets = {}
     max_horizon = max(horizons) 
-    # for i in range(num_arms):
-    #     rew = mab.pull(i)
-    #     cum_reward += rew
     for i in range(max_horizon):
         arm_index = mab.get_max_thompson_sample()
         rew = mab.pull(arm_index)
