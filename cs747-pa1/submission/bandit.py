@@ -2,7 +2,8 @@ import numpy as np
 import matplotlib
 import os
 import sys
-from utils import kl_div, beta_pdf, kl_div_array
+from utils import kl_div, beta_pdf, kl_div_array, parser
+from algorithms import *
 
 
 class MultiArmedBandit(object):
@@ -26,7 +27,7 @@ class MultiArmedBandit(object):
             hint (numpy.ndarray): Sorted list of true means
         """
         self.hint = hint
-        self.hint_weights = np.ones((self.n,self.n))
+        self.hint_weights = np.ones((self.n,self.n))/self.n
 
     def pull(self,i):
         """Pulling an arm
@@ -37,16 +38,19 @@ class MultiArmedBandit(object):
         Returns:
             float: Reward for the pull
         """
-        reward = np.random.binomial(size=1,n=1,p=self.p_list[i])[0]
+        reward = 1 if np.random.uniform(0,1)<=self.p_list[i] else 0
         if reward == 0:
             self.fail[i]+=1
             if self.hint is not None:
-                self.hint_weights[i] = self.hint_weights[i] * (1-self.hint) * (self.succ[i]+self.fail[i]+1)/self.fail[i] 
+                self.hint_weights[i] = self.hint_weights[i] * (1-self.hint)
+                self.hint_weights[i] /= np.sum(self.hint_weights[i])
 
         else:
             self.succ[i]+=1
             if self.hint is not None:
-                self.hint_weights[i] = self.hint_weights[i] * self.hint * (self.succ[i]+self.fail[i]+1)/self.succ[i]
+                self.hint_weights[i] = self.hint_weights[i]*self.hint 
+                self.hint_weights[i] /= np.sum(self.hint_weights[i])
+        
         return reward
 
     
@@ -98,7 +102,7 @@ class MultiArmedBandit(object):
         emperical_means = self.succ/(self.succ+self.fail)
         low = emperical_means.copy()
         high = np.ones(self.n)
-        rhs = np.log(time)
+        rhs = np.log(time) + c*np.log(np.log(time))
         mid = np.ones(self.n)
         lhs = np.ones(self.n)
         while not all(np.abs(low-high)< precision):
@@ -108,23 +112,6 @@ class MultiArmedBandit(object):
             low[ (lhs<=rhs) * cond ] = mid[(lhs<=rhs) * cond]
             high[(lhs>rhs) * cond ] = mid[(lhs>rhs) * cond]
         return np.argmax(low)
-
-        # emp_mean = self.get_emperical_mean()
-        # low = emp_mean
-        # high = 1
-        # while(True):
-        #     mid = (low+high)/2
-        #     if np.abs(low-high) < 1e-2:
-        #         break
-        #     lhs = kl_div(emp_mean,mid)*(self.succ+self.fail)
-        #     rhs = np.log(time) + 3*np.log(np.log(time))
-        #     if lhs <= rhs:
-        #         low = mid
-        #     else:
-        #         high = mid
-            
-        # return mid
-        
 
 
     def get_max_thompson_sample(self):
@@ -148,6 +135,42 @@ class MultiArmedBandit(object):
         max_hint_index = np.argmax(self.hint)
         return np.argmax(self.hint_weights[:,max_hint_index])
 
+if __name__ == "__main__":
+    args = parser()
+    p_list = []
+    with open(args.instance,'r') as f:
+        lines = f.readlines()
+        for line in lines:
+            try:
+                p_list.append(float(line.replace("\n","").strip()))
+            except:
+                continue
+    mab = MultiArmedBandit(p_list)
+    np.random.seed(args.randomSeed)
+    if args.algorithm == 'epsilon-greedy':
+        regrets = epsilon_greedy(mab,args.epsilon,[args.horizon])
+    elif args.algorithm == 'ucb':
+        regrets = ucb(mab,[args.horizon])
+    elif args.algorithm == 'kl-ucb':
+        regrets = kl_ucb(mab,0,1e-3,[args.horizon])
+    elif args.algorithm == 'thompson-sampling':
+        regrets = thompson_sampling(mab,[args.horizon])
+    elif args.algorithm == 'thompson-sampling-with-hint':
+        regrets = thompson_sampling_with_hint(mab,[args.horizon])
+    
+    output = args.instance+", "+args.algorithm+", "+str(args.randomSeed)+", "+str(args.epsilon)+", "+str(args.horizon)+", "+str(regrets[args.horizon])+"\n"
+    print(output)
+
+    # total_regrets = np.zeros(6)
+    # for seed in range(50):
+    #     print(seed)
+    #     np.random.seed(seed)
+    #     # mab = MultiArmedBandit([0.4,0.3,0.5,0.2,0.1])
+    #     # mab = MultiArmedBandit([0.15,0.23,0.37,0.44,0.50,0.32,0.78,0.21,0.82,0.56,0.34,0.56,0.84,0.76,0.43,0.65,0.73,0.92,0.10,0.89,0.48,0.96,0.60,0.54,0.49])
+    #     mab = MultiArmedBandit([0.4,0.8])
+    #     regrets = thompson_sampling(mab,[100,400,1600,6400,25600,102400])
+    #     total_regrets += np.array(list(regrets.values()))
+    # print(total_regrets/50)
 
     
         

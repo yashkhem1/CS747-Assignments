@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib
 import os
 import sys
-from bandit import MultiArmedBandit
+# from bandit import MultiArmedBandit
 
 def epsilon_greedy(mab, epsilon, horizons):
     """Epsilon Greedy  Algorithm
@@ -57,7 +57,7 @@ def ucb(mab,horizons):
         rew = mab.pull(i)
         cum_reward += rew
     for i in range(num_arms,max_horizon):
-        arm_index = mab.get_max_ucb(i+1)
+        arm_index = mab.get_max_ucb(i)
         rew = mab.pull(arm_index)
         cum_reward += rew
         if i+1 in horizons:
@@ -66,7 +66,7 @@ def ucb(mab,horizons):
     return regrets
 
 
-def kl_ucb(mab, horizons):
+def kl_ucb(mab, c, precision, horizons):
     """KL-UCB Algorithm
 
     Args:
@@ -80,11 +80,16 @@ def kl_ucb(mab, horizons):
     cum_reward = 0
     regrets = {}
     max_horizon = max(horizons)
-    for i in range(num_arms):
-        rew = mab.pull(i)
-        cum_reward += rew
-    for i in range(num_arms,max_horizon):
-        arm_index = mab.get_max_kl_ucb(i+1,0,1e-3)
+    init_pulls = 0
+    while(True):
+        for i in range(num_arms):
+            rew = mab.pull(i)
+            cum_reward += rew
+            init_pulls+=1
+        if np.log(init_pulls) + c*np.log(np.log(init_pulls)) >=0:
+            break   
+    for i in range(init_pulls,max_horizon):
+        arm_index = mab.get_max_kl_ucb(i,c,precision)
         rew = mab.pull(arm_index)
         cum_reward += rew
         if i+1 in horizons:
@@ -102,14 +107,13 @@ def thompson_sampling(mab, horizons):
     Returns:
         dict: Dictionary that maps horizon values to cumulative regret
     """
-    num_arms = mab.n
     cum_reward = 0
     regrets = {}
-    max_horizon = max(horizons)
-    for i in range(num_arms):
-        rew = mab.pull(i)
-        cum_reward += rew
-    for i in range(num_arms,max_horizon):
+    max_horizon = max(horizons) 
+    # for i in range(num_arms):
+    #     rew = mab.pull(i)
+    #     cum_reward += rew
+    for i in range(max_horizon):
         arm_index = mab.get_max_thompson_sample()
         rew = mab.pull(arm_index)
         cum_reward += rew
@@ -128,16 +132,12 @@ def thompson_sampling_with_hint(mab, horizons):
     Returns:
         dict: Dictionary that maps horizon values to cumulative regret
     """
-    num_arms = mab.n
     cum_reward = 0
     regrets = {}
     max_horizon = max(horizons)
     hint = np.sort(mab.p_list)
     mab.set_hint(hint)
-    for i in range(num_arms):
-        rew = mab.pull(i)
-        cum_reward += rew
-    for i in range(num_arms,max_horizon):
+    for i in range(max_horizon):
         arm_index = mab.get_max_thompson_hint_sample()
         rew = mab.pull(arm_index)
         cum_reward += rew
@@ -146,15 +146,5 @@ def thompson_sampling_with_hint(mab, horizons):
 
     return regrets
 
-if __name__ == '__main__':
-    total_regrets = np.zeros(6)
-    for seed in range(50):
-        print(seed)
-        np.random.seed(seed)
-        # mab = MultiArmedBandit([0.4,0.3,0.5,0.2,0.1])
-        mab = MultiArmedBandit([0.15,0.23,0.37,0.44,0.50,0.32,0.78,0.21,0.82,0.56,0.34,0.56,0.84,0.76,0.43,0.65,0.73,0.92,0.10,0.89,0.48,0.96,0.60,0.54,0.49])
-        regrets = thompson_sampling_with_hint(mab,[100,400,1600,6400,25600,102400])
-        total_regrets += np.array(list(regrets.values()))
-    print(total_regrets/50)
 
     

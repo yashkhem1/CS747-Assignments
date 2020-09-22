@@ -47,7 +47,8 @@ def kl_div_array(x,y):
         numpy.ndarray: List of KL Divergences
     """
     kl_div = np.zeros(len(x))
-    kl_div[y==1] = np.inf
+    kl_div[(y==1) * (x!=1)] = np.inf
+    kl_div[(y==1) * (x==1)] = 0
     cond1 = (x==0) * (y!=1)
     kl_div[cond1] = np.log(1/(1-y[cond1]))
     cond2 = (x!=0) * (y!=1)
@@ -62,7 +63,9 @@ def parser():
     parser.add_argument('--instance',type=str,help='Path to the bandit instance file')
     parser.add_argument('--algorithm',type=str,help='Algorithm for pulling the bandits', choices=['epsilon-greedy','ucb','kl-ucb',
                                                                                         'thompson-sampling','thompson-sampling-with-hint'])
-    parser.add_argument('--epsilon',type=float,help='Epsilon for epsilon-greedy')
+    parser.add_argument('--epsilon',type=float,help='Epsilon for epsilon-greedy', default=0.02)
     parser.add_argument('--randomSeed',type=int,help='Seed for initializing Random Generator')
     parser.add_argument('--horizon', type=int, help='Horizon till which experiment is to be performed')
+    args = parser.parse_args()
+    return args
     
