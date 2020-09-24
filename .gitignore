@@ -1,1 +1,4 @@
 *.pyc
+*.tar.gz
+cs747-pa1/submission/generated_data/*
+cs747-pa1/submission/submission/*

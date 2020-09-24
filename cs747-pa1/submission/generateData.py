@@ -101,6 +101,8 @@ def plot_data():
         for (algo,color) in zip(algorithms,colors):
             plt.plot(horizons,regrets[algo],color=color,label=algo)
         plt.legend()
+        plt.xlabel('Horizon')
+        plt.ylabel('Regret')
         plt.savefig(file1)
 
     with open('outputDataT2.pkl','rb') as f:
@@ -116,6 +118,8 @@ def plot_data():
         for (algo,color) in zip(algorithms,colors):
             plt.plot(horizons,regrets[algo],color=color,label=algo)
         plt.legend()
+        plt.xlabel('Horizon')
+        plt.ylabel('Regret')
         plt.savefig(file2)
 
 

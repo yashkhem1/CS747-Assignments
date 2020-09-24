@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib
 import os
 import sys
-# from bandit import MultiArmedBandit
 
 def epsilon_greedy(mab, epsilon, horizons):
     """Epsilon Greedy  Algorithm
@@ -22,6 +21,8 @@ def epsilon_greedy(mab, epsilon, horizons):
     for i in range(num_arms):
         rew = mab.pull(i)
         cum_reward += rew
+        if i+1 in horizons:
+            regrets[i+1] = mab.max_exp_rew(i+1) - cum_reward
     for i in range(num_arms,max_horizon):
         frac = np.random.uniform(0,1)
         if frac < epsilon:
@@ -56,6 +57,8 @@ def ucb(mab,horizons):
     for i in range(num_arms):
         rew = mab.pull(i)
         cum_reward += rew
+        if i+1 in horizons:
+            regrets[i+1] = mab.max_exp_rew(i+1) - cum_reward
     for i in range(num_arms,max_horizon):
         arm_index = mab.get_max_ucb(i)
         rew = mab.pull(arm_index)
@@ -86,6 +89,8 @@ def kl_ucb(mab, c, precision, horizons):
             rew = mab.pull(i)
             cum_reward += rew
             init_pulls+=1
+            if init_pulls in horizons:
+                regrets[init_pulls] = mab.max_exp_rew(init_pulls) - cum_reward
         if np.log(init_pulls) + c*np.log(np.log(init_pulls)) >=0:
             break   
     for i in range(init_pulls,max_horizon):

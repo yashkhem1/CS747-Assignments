@@ -1,0 +1,3 @@
+No code has been copied from any external source.
+The only external libraries that have been used are numpy and matplotlib, as well as some internal libraries of Python.
+The algorithms have been implemented as described in the lecture slides/ reference papers.
