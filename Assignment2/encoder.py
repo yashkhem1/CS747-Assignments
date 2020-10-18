@@ -46,40 +46,40 @@ class Maze(MDP):
             bool_miss_wall = self.matrix[x_coord,y_coord-1]!=1
             bool_reach_end = self.matrix[x_coord,y_coord-1]==3
             self.transition_matrix[:,3,:][states[bool_miss_wall*bool_not_end],transition_states[bool_miss_wall*bool_not_end]] = 1
-            # self.transition_matrix[:,3,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = 1
+            self.transition_matrix[:,3,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = 1
             self.reward_matrix[:,3,:][states[bool_miss_wall*bool_not_end*bool_reach_end],transition_states[bool_miss_wall*bool_not_end*bool_reach_end]] = 10000
             self.reward_matrix[:,3,:][states[bool_miss_wall*bool_not_end*~bool_reach_end],transition_states[bool_miss_wall*bool_not_end*~bool_reach_end]] = -1
-            # self.reward_matrix[:,3,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = -10000
+            self.reward_matrix[:,3,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = -10000
 
             #East
             transition_states = self.index_state_map[x_coord,y_coord+1]
             bool_miss_wall = self.matrix[x_coord,y_coord+1]!=1
             bool_reach_end = self.matrix[x_coord,y_coord+1]==3
             self.transition_matrix[:,1,:][states[bool_miss_wall*bool_not_end],transition_states[bool_miss_wall*bool_not_end]] = 1
-            # self.transition_matrix[:,1,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = 1
+            self.transition_matrix[:,1,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = 1
             self.reward_matrix[:,1,:][states[bool_miss_wall*bool_not_end*bool_reach_end],transition_states[bool_miss_wall*bool_not_end*bool_reach_end]] = 10000
             self.reward_matrix[:,1,:][states[bool_miss_wall*bool_not_end*~bool_reach_end],transition_states[bool_miss_wall*bool_not_end*~bool_reach_end]] = -1
-            # self.reward_matrix[:,1,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = -10000
+            self.reward_matrix[:,1,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = -10000
 
             #North
             transition_states = self.index_state_map[x_coord-1,y_coord]
             bool_miss_wall = self.matrix[x_coord-1,y_coord]!=1
             bool_reach_end = self.matrix[x_coord-1,y_coord]==3
             self.transition_matrix[:,0,:][states[bool_miss_wall*bool_not_end],transition_states[bool_miss_wall*bool_not_end]] = 1
-            # self.transition_matrix[:,0,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = 1
+            self.transition_matrix[:,0,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = 1
             self.reward_matrix[:,0,:][states[bool_miss_wall*bool_not_end*bool_reach_end],transition_states[bool_miss_wall*bool_not_end*bool_reach_end]] = 10000
             self.reward_matrix[:,0,:][states[bool_miss_wall*bool_not_end*~bool_reach_end],transition_states[bool_miss_wall*bool_not_end*~bool_reach_end]] = -1
-            # self.reward_matrix[:,0,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = -10000
+            self.reward_matrix[:,0,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = -10000
 
             #South
             transition_states = self.index_state_map[x_coord+1,y_coord]
             bool_miss_wall = self.matrix[x_coord+1,y_coord]!=1
             bool_reach_end = self.matrix[x_coord+1,y_coord]==3
             self.transition_matrix[:,2,:][states[bool_miss_wall*bool_not_end],transition_states[bool_miss_wall*bool_not_end]] = 1
-            # self.transition_matrix[:,2,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = 1
+            self.transition_matrix[:,2,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = 1
             self.reward_matrix[:,2,:][states[bool_miss_wall*bool_not_end*bool_reach_end],transition_states[bool_miss_wall*bool_not_end*bool_reach_end]] = 10000
             self.reward_matrix[:,2,:][states[bool_miss_wall*bool_not_end*~bool_reach_end],transition_states[bool_miss_wall*bool_not_end*~bool_reach_end]] = -1
-            # self.reward_matrix[:,2,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = -10000
+            self.reward_matrix[:,2,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = -10000
             # for i in range(self.num_states):
             #     if i in self.end_states:
             #         continue
