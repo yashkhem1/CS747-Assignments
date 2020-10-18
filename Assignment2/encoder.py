@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 from planner import MDP
+import time
 
 class Maze(MDP):
     def __init__(self):
@@ -30,7 +31,7 @@ class Maze(MDP):
         self.index_state_map[self.matrix==1] = -1
         self.start_state = self.index_state_map[self.matrix==2][0]
         self.end_states = self.index_state_map[self.matrix==3]
-        self.discount = 0.9
+        self.discount = 0.99
         self.mdptype = 'episodic'
         self.optimum_value = np.zeros(self.num_states)
         self.optimum_policy = np.zeros(self.num_states)
@@ -38,96 +39,71 @@ class Maze(MDP):
         if not partial:
             self.transition_matrix = np.zeros((self.num_states,self.num_actions,self.num_states))
             self.reward_matrix = np.zeros((self.num_states,self.num_actions,self.num_states))
-            x_coord, y_coord = np.where(self.matrix!=1)
-            states = np.arange(self.num_states)
-            bool_not_end = self.matrix[x_coord,y_coord]!=3
-            #West
-            transition_states = self.index_state_map[x_coord,y_coord-1]
-            bool_miss_wall = self.matrix[x_coord,y_coord-1]!=1
-            bool_reach_end = self.matrix[x_coord,y_coord-1]==3
-            self.transition_matrix[:,3,:][states[bool_miss_wall*bool_not_end],transition_states[bool_miss_wall*bool_not_end]] = 1
-            self.transition_matrix[:,3,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = 1
-            self.reward_matrix[:,3,:][states[bool_miss_wall*bool_not_end*bool_reach_end],transition_states[bool_miss_wall*bool_not_end*bool_reach_end]] = 10000
-            self.reward_matrix[:,3,:][states[bool_miss_wall*bool_not_end*~bool_reach_end],transition_states[bool_miss_wall*bool_not_end*~bool_reach_end]] = -1
-            self.reward_matrix[:,3,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = -10000
+            # x_coord, y_coord = np.where(self.matrix!=1)
+            # states = np.tile(np.arange(self.num_states),4)
+            # bool_not_end = np.tile(self.matrix[x_coord,y_coord]!=3,4)
+            # actions = np.arange(4).repeat(self.num_states)
+            # transition_states = np.concatenate([self.index_state_map[x_coord-1,y_coord],self.index_state_map[x_coord,y_coord+1],self.index_state_map[x_coord+1,y_coord],self.index_state_map[x_coord,y_coord-1]])
+            # bool_miss_wall = np.concatenate([self.matrix[x_coord-1,y_coord]!=1,self.matrix[x_coord,y_coord+1]!=1,self.matrix[x_coord+1,y_coord]!=1,self.matrix[x_coord,y_coord-1]!=1])
+            # bool_reach_end = np.concatenate([self.matrix[x_coord-1,y_coord]==3,self.matrix[x_coord,y_coord+1]==3,self.matrix[x_coord+1,y_coord]==3,self.matrix[x_coord,y_coord-1]==3])
+            # b1 = bool_miss_wall*bool_not_end
+            # b2 = ~bool_miss_wall*bool_not_end
+            # b3 = bool_miss_wall*bool_not_end*bool_reach_end
+            # b4 = bool_miss_wall*bool_not_end*~bool_reach_end
+            # self.transition_matrix[states[b1],actions[b1],transition_states[b1]] = 1
+            # self.transition_matrix[states[b2],actions[b2],states[b2]] = 1
+            # self.reward_matrix[states[b3],actions[b3],transition_states[b3]] = 10000
+            # self.reward_matrix[states[b4],actions[b4],transition_states[b4]] = -10000/self.num_states
+            # self.reward_matrix[states[b2],actions[b2],states[b2]] = -10000
 
-            #East
-            transition_states = self.index_state_map[x_coord,y_coord+1]
-            bool_miss_wall = self.matrix[x_coord,y_coord+1]!=1
-            bool_reach_end = self.matrix[x_coord,y_coord+1]==3
-            self.transition_matrix[:,1,:][states[bool_miss_wall*bool_not_end],transition_states[bool_miss_wall*bool_not_end]] = 1
-            self.transition_matrix[:,1,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = 1
-            self.reward_matrix[:,1,:][states[bool_miss_wall*bool_not_end*bool_reach_end],transition_states[bool_miss_wall*bool_not_end*bool_reach_end]] = 10000
-            self.reward_matrix[:,1,:][states[bool_miss_wall*bool_not_end*~bool_reach_end],transition_states[bool_miss_wall*bool_not_end*~bool_reach_end]] = -1
-            self.reward_matrix[:,1,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = -10000
+            for i in range(self.num_states):
+                if i in self.end_states:
+                    continue
+                x,y = self.state_index_map[i]
 
-            #North
-            transition_states = self.index_state_map[x_coord-1,y_coord]
-            bool_miss_wall = self.matrix[x_coord-1,y_coord]!=1
-            bool_reach_end = self.matrix[x_coord-1,y_coord]==3
-            self.transition_matrix[:,0,:][states[bool_miss_wall*bool_not_end],transition_states[bool_miss_wall*bool_not_end]] = 1
-            self.transition_matrix[:,0,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = 1
-            self.reward_matrix[:,0,:][states[bool_miss_wall*bool_not_end*bool_reach_end],transition_states[bool_miss_wall*bool_not_end*bool_reach_end]] = 10000
-            self.reward_matrix[:,0,:][states[bool_miss_wall*bool_not_end*~bool_reach_end],transition_states[bool_miss_wall*bool_not_end*~bool_reach_end]] = -1
-            self.reward_matrix[:,0,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = -10000
+                #West
+                if y>0 and self.matrix[x,y-1]!=1:
+                    self.transition_matrix[i,3,self.index_state_map[x,y-1]] = 1
+                    if self.index_state_map[x,y-1] in self.end_states:
+                        self.reward_matrix[i,3,self.index_state_map[x,y-1]] = 100*self.num_states
+                    else:
+                        self.reward_matrix[i,3,self.index_state_map[x,y-1]] = -100
+                else:
+                    self.transition_matrix[i,3,i] = 1
+                    self.reward_matrix[i,3,i] = -100*self.num_states
 
-            #South
-            transition_states = self.index_state_map[x_coord+1,y_coord]
-            bool_miss_wall = self.matrix[x_coord+1,y_coord]!=1
-            bool_reach_end = self.matrix[x_coord+1,y_coord]==3
-            self.transition_matrix[:,2,:][states[bool_miss_wall*bool_not_end],transition_states[bool_miss_wall*bool_not_end]] = 1
-            self.transition_matrix[:,2,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = 1
-            self.reward_matrix[:,2,:][states[bool_miss_wall*bool_not_end*bool_reach_end],transition_states[bool_miss_wall*bool_not_end*bool_reach_end]] = 10000
-            self.reward_matrix[:,2,:][states[bool_miss_wall*bool_not_end*~bool_reach_end],transition_states[bool_miss_wall*bool_not_end*~bool_reach_end]] = -1
-            self.reward_matrix[:,2,:][states[~bool_miss_wall*bool_not_end],states[~bool_miss_wall*bool_not_end]] = -10000
-            # for i in range(self.num_states):
-            #     if i in self.end_states:
-            #         continue
-            #     x,y = self.state_index_map[i]
+                #East
+                if y<self.columns-1 and self.matrix[x,y+1]!=1:
+                    self.transition_matrix[i,1,self.index_state_map[x,y+1]] = 1
+                    if self.index_state_map[x,y+1] in self.end_states:
+                        self.reward_matrix[i,1,self.index_state_map[x,y+1]] = 100*self.num_states
+                    else:
+                        self.reward_matrix[i,1,self.index_state_map[x,y+1]] = -100
+                else:
+                    self.transition_matrix[i,1,i] = 1
+                    self.reward_matrix[i,1,i] = -100*self.num_states
 
-            #     #West
-            #     if y>0 and self.matrix[x,y-1]!=1:
-            #         self.transition_matrix[i,3,self.index_state_map[x,y-1]] = 1
-            #         if self.index_state_map[x,y-1] in self.end_states:
-            #             self.reward_matrix[i,3,self.index_state_map[x,y-1]] = 70
-            #         else:
-            #             self.reward_matrix[i,3,self.index_state_map[x,y-1]] = -1
-            #     else:
-            #         self.transition_matrix[i,3,i] = 1
-            #         self.reward_matrix[i,3,i] = -25
+                #North
+                if x>0 and self.matrix[x-1,y]!=1:
+                    self.transition_matrix[i,0,self.index_state_map[x-1,y]] = 1
+                    if self.index_state_map[x-1,y] in self.end_states:
+                        self.reward_matrix[i,0,self.index_state_map[x-1,y]] = 100*self.num_states
+                    else:
+                        self.reward_matrix[i,0,self.index_state_map[x-1,y]] = -100
+                else:
+                    self.transition_matrix[i,0,i] = 1
+                    self.reward_matrix[i,0,i] = -100*self.num_states
 
-            #     #East
-            #     if y<self.columns-1 and self.matrix[x,y+1]!=1:
-            #         self.transition_matrix[i,1,self.index_state_map[x,y+1]] = 1
-            #         if self.index_state_map[x,y+1] in self.end_states:
-            #             self.reward_matrix[i,1,self.index_state_map[x,y+1]] = 70
-            #         else:
-            #             self.reward_matrix[i,1,self.index_state_map[x,y+1]] = -1
-            #     else:
-            #         self.transition_matrix[i,1,i] = 1
-            #         self.reward_matrix[i,1,i] = -25
-
-            #     #North
-            #     if x>0 and self.matrix[x-1,y]!=1:
-            #         self.transition_matrix[i,0,self.index_state_map[x-1,y]] = 1
-            #         if self.index_state_map[x-1,y] in self.end_states:
-            #             self.reward_matrix[i,0,self.index_state_map[x-1,y]] = 70
-            #         else:
-            #             self.reward_matrix[i,0,self.index_state_map[x-1,y]] = -1
-            #     else:
-            #         self.transition_matrix[i,0,i] = 1
-            #         self.reward_matrix[i,0,i] = -25
-
-            #     #South
-            #     if x<self.rows-1 and self.matrix[x+1,y]!=1:
-            #         self.transition_matrix[i,2,self.index_state_map[x+1,y]] = 1
-            #         if self.index_state_map[x+1,y] in self.end_states:
-            #             self.reward_matrix[i,2,self.index_state_map[x+1,y]] = 70
-            #         else:
-            #             self.reward_matrix[i,2,self.index_state_map[x+1,y]] = -1
-            #     else:
-            #         self.transition_matrix[i,2,i] = 1
-            #         self.reward_matrix[i,2,i] = -25
+                #South
+                if x<self.rows-1 and self.matrix[x+1,y]!=1:
+                    self.transition_matrix[i,2,self.index_state_map[x+1,y]] = 1
+                    if self.index_state_map[x+1,y] in self.end_states:
+                        self.reward_matrix[i,2,self.index_state_map[x+1,y]] = 100*self.num_states
+                    else:
+                        self.reward_matrix[i,2,self.index_state_map[x+1,y]] = -100
+                else:
+                    self.transition_matrix[i,2,i] = 1
+                    self.reward_matrix[i,2,i] = -100*self.num_states
     
     def get_path(self):
         directions = ['N','E','S','W']

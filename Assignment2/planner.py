@@ -104,7 +104,7 @@ class MDP(object):
         old_value = self.optimum_policy
         while(True):
             new_value = np.max(np.sum(self.transition_matrix*(self.reward_matrix + self.discount*old_value.reshape((1,1,-1))),axis=-1),axis=-1)
-            if self.max_norm(new_value,old_value) < 1e-8:
+            if self.max_norm(new_value,old_value) < 1e-6:
                 break
             old_value = new_value
 
@@ -163,19 +163,9 @@ class MDP(object):
         else:
             es_string = " ".join([str(x) for x in self.end_states])
         print("end",es_string)
-        ts_string = ""
-        first = 0
-        for i in range(self.num_states):
-            for j in range(self.num_actions):
-                for k in range(self.num_states):
-                    if self.transition_matrix[i,j,k] != 0:
-                        cells = ["transition",i,j,k,self.reward_matrix[i,j,k],self.transition_matrix[i,j,k]]
-                        if not first:
-                            first = 1
-                        else:
-                            ts_string +="\n"
-                        ts_string += " ".join(str(x) for x in cells)
-        print(ts_string)
+        states,actions,states_ = np.where(self.transition_matrix!=0)
+        for s,ac,s_ in zip(states,actions,states_):
+            print("transition",s,ac,s_,self.reward_matrix[s,ac,s_],self.transition_matrix[s,ac,s_])
         print("mdptype",self.mdptype)
         print("discount",self.discount)
 
