@@ -2,6 +2,9 @@ from pulp import pulp,LpProblem,LpVariable,value,LpMaximize
 import os
 import argparse
 import numpy as np
+import time
+import sys
+np.set_printoptions(threshold=sys.maxsize)
 
 class MDP(object):
     def __init__(self,num_states=None,num_actions=None,transition_matrix=None,reward_matrix=None,discount=None,start_state=None,end_states=None,mdptype=None):
@@ -69,23 +72,25 @@ class MDP(object):
         return np.max(np.abs(a-b))
 
     def value_from_policy(self,policy):
-        """Get the value function for the given  policy
+        """Get the value function for the given  policy by solving Bellman's Equation
 
         Args:
             policy (numpy.ndarray): Policy for each state
         """
         value = np.zeros(self.num_states)
-        non_terminal_states = np.delete(np.arange(self.num_states),self.end_states)
         new_index = np.arange(self.num_states)*self.num_actions + policy
         new_t_matrix = self.transition_matrix.reshape(-1,self.num_states)[new_index] #num_states * num_states
         new_r_matrix = self.reward_matrix.reshape(-1,self.num_states)[new_index] #num_states * num_states
         t_r = np.sum(new_t_matrix*new_r_matrix,axis=-1) #num_states
-        new_t_matrix = new_t_matrix[non_terminal_states,:][:,non_terminal_states] #num_nt_states * num_nt_states
-        new_r_matrix = new_r_matrix[non_terminal_states,:][:,non_terminal_states] #num_nt_states * num_nt_states
-        t_r = t_r[non_terminal_states] #num_nt_states
-
-        non_terminal_values = np.linalg.inv(np.eye(len(non_terminal_states))-self.discount*new_t_matrix)@t_r
-        value[non_terminal_states] = non_terminal_values
+        if self.discount == 1:
+            valid_states = np.delete(np.arange(self.num_states),self.end_states)
+            new_t_matrix = new_t_matrix[valid_states,:][:,valid_states] #num_nt_states * num_nt_states
+            new_r_matrix = new_r_matrix[valid_states,:][:,valid_states] #num_nt_states * num_nt_states
+            t_r = t_r[valid_states] #num_nt_states
+            valid_values = np.linalg.pinv(np.eye(len(valid_states))-self.discount*new_t_matrix)@t_r
+            value[valid_states] = valid_values
+        else:
+            value = np.linalg.inv(np.eye(self.num_states)-self.discount*new_t_matrix)@t_r
         return value
 
 
@@ -102,15 +107,20 @@ class MDP(object):
         """Get the optimum values and policy using value iteration
         """
         old_value = self.optimum_policy
+        if self.discount < 1:
+            threshold = (1-self.discount) * 1e-6 /(self.discount)
+        else:
+            threshold = 1e-8
         while(True):
             new_value = np.max(np.sum(self.transition_matrix*(self.reward_matrix + self.discount*old_value.reshape((1,1,-1))),axis=-1),axis=-1)
-            if self.max_norm(new_value,old_value) < 1e-6:
+            if self.max_norm(new_value,old_value) < threshold:
                 break
             old_value = new_value
-
+        
         self.optimum_value = new_value
         self.optimum_policy = self.policy_from_value(self.optimum_value)
-        self.optimum_value = self.value_from_policy(self.optimum_policy)
+        if self.discount == 1:
+            self.optimum_value = self.value_from_policy(self.optimum_policy)
 
     def linear_programming(self):
         """Get the optimum values and policy using linear programming formulation
@@ -130,12 +140,12 @@ class MDP(object):
             optimum_value.append(value(state_variables[i]))
         self.optimum_value = np.array(optimum_value)
         self.optimum_policy = self.policy_from_value(self.optimum_value)
-        self.optimum_value = self.value_from_policy(self.optimum_policy)
 
     def howard_policy_iteration(self):
         """Get the optimum values and policy using howard policy iteration
         """
         old_policy = self.optimum_policy
+        # print(old_policy,file=sys.stderr)
         while(True):
             values = self.value_from_policy(old_policy)
             new_policy = self.policy_from_value(values)
@@ -170,6 +180,11 @@ class MDP(object):
         print("discount",self.discount)
 
     def solve_from_file(self,planfile):
+        """Get the optimum policy and value function from a file
+
+        Args:
+            planfile (str): Path to value and policy file
+        """
         with open(planfile,'r') as f:
             lines = f.readlines()
         for i,line in enumerate(lines):

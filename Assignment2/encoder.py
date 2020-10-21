@@ -5,6 +5,8 @@ import time
 
 class Maze(MDP):
     def __init__(self):
+        """Initialize the Maze object
+        """
         super(Maze,self).__init__()
         self.rows = None
         self.columns = None
@@ -13,6 +15,12 @@ class Maze(MDP):
         self.index_state_map = None
         
     def parse(self,gridfile,partial=False):
+        """Parse the Maze object from the grid file
+
+        Args:
+            gridfile (str): Path to grid file
+            partial (bool, optional): Whether to calculate transition matrix and reward matrix. Defaults to False.
+        """
         with open(gridfile,'r') as f:
             grid_mat = []
             lines = f.readlines()
@@ -31,7 +39,7 @@ class Maze(MDP):
         self.index_state_map[self.matrix==1] = -1
         self.start_state = self.index_state_map[self.matrix==2][0]
         self.end_states = self.index_state_map[self.matrix==3]
-        self.discount = 0.99
+        self.discount = 1
         self.mdptype = 'episodic'
         self.optimum_value = np.zeros(self.num_states)
         self.optimum_policy = np.zeros(self.num_states)
@@ -60,52 +68,59 @@ class Maze(MDP):
                 if i in self.end_states:
                     continue
                 x,y = self.state_index_map[i]
+                min_factor = max(1e-30,self.discount**self.num_states)
+                max_factor = 1/min_factor
 
                 #West
                 if y>0 and self.matrix[x,y-1]!=1:
                     self.transition_matrix[i,3,self.index_state_map[x,y-1]] = 1
                     if self.index_state_map[x,y-1] in self.end_states:
-                        self.reward_matrix[i,3,self.index_state_map[x,y-1]] = 100*self.num_states
+                        self.reward_matrix[i,3,self.index_state_map[x,y-1]] = max_factor*10000
                     else:
-                        self.reward_matrix[i,3,self.index_state_map[x,y-1]] = -100
+                        self.reward_matrix[i,3,self.index_state_map[x,y-1]] = -1
                 else:
                     self.transition_matrix[i,3,i] = 1
-                    self.reward_matrix[i,3,i] = -100*self.num_states
+                    self.reward_matrix[i,3,i] = -1e3
 
                 #East
                 if y<self.columns-1 and self.matrix[x,y+1]!=1:
                     self.transition_matrix[i,1,self.index_state_map[x,y+1]] = 1
                     if self.index_state_map[x,y+1] in self.end_states:
-                        self.reward_matrix[i,1,self.index_state_map[x,y+1]] = 100*self.num_states
+                        self.reward_matrix[i,1,self.index_state_map[x,y+1]] = max_factor*10000
                     else:
-                        self.reward_matrix[i,1,self.index_state_map[x,y+1]] = -100
+                        self.reward_matrix[i,1,self.index_state_map[x,y+1]] = -1
                 else:
                     self.transition_matrix[i,1,i] = 1
-                    self.reward_matrix[i,1,i] = -100*self.num_states
+                    self.reward_matrix[i,1,i] = -1e3
 
                 #North
                 if x>0 and self.matrix[x-1,y]!=1:
                     self.transition_matrix[i,0,self.index_state_map[x-1,y]] = 1
                     if self.index_state_map[x-1,y] in self.end_states:
-                        self.reward_matrix[i,0,self.index_state_map[x-1,y]] = 100*self.num_states
+                        self.reward_matrix[i,0,self.index_state_map[x-1,y]] = max_factor*10000
                     else:
-                        self.reward_matrix[i,0,self.index_state_map[x-1,y]] = -100
+                        self.reward_matrix[i,0,self.index_state_map[x-1,y]] = -1
                 else:
                     self.transition_matrix[i,0,i] = 1
-                    self.reward_matrix[i,0,i] = -100*self.num_states
+                    self.reward_matrix[i,0,i] = -1e3
 
                 #South
                 if x<self.rows-1 and self.matrix[x+1,y]!=1:
                     self.transition_matrix[i,2,self.index_state_map[x+1,y]] = 1
                     if self.index_state_map[x+1,y] in self.end_states:
-                        self.reward_matrix[i,2,self.index_state_map[x+1,y]] = 100*self.num_states
+                        self.reward_matrix[i,2,self.index_state_map[x+1,y]] = max_factor*10000
                     else:
-                        self.reward_matrix[i,2,self.index_state_map[x+1,y]] = -100
+                        self.reward_matrix[i,2,self.index_state_map[x+1,y]] = -1
                 else:
                     self.transition_matrix[i,2,i] = 1
-                    self.reward_matrix[i,2,i] = -100*self.num_states
+                    self.reward_matrix[i,2,i] = -1e3
     
     def get_path(self):
+        """Generate path from the optimal policy and value
+
+        Returns:
+            List(str): List of directions to follow from the start state
+        """
         directions = ['N','E','S','W']
         dx = [-1,0,1,0]
         dy = [0,1,0,-1]
