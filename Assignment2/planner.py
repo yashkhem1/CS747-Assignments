@@ -81,16 +81,12 @@ class MDP(object):
         new_index = np.arange(self.num_states)*self.num_actions + policy
         new_t_matrix = self.transition_matrix.reshape(-1,self.num_states)[new_index] #num_states * num_states
         new_r_matrix = self.reward_matrix.reshape(-1,self.num_states)[new_index] #num_states * num_states
-        t_r = np.sum(new_t_matrix*new_r_matrix,axis=-1) #num_states
-        if self.discount == 1:
-            valid_states = np.delete(np.arange(self.num_states),self.end_states)
-            new_t_matrix = new_t_matrix[valid_states,:][:,valid_states] #num_nt_states * num_nt_states
-            new_r_matrix = new_r_matrix[valid_states,:][:,valid_states] #num_nt_states * num_nt_states
-            t_r = t_r[valid_states] #num_nt_states
-            valid_values = np.linalg.pinv(np.eye(len(valid_states))-self.discount*new_t_matrix)@t_r
-            value[valid_states] = valid_values
-        else:
-            value = np.linalg.inv(np.eye(self.num_states)-self.discount*new_t_matrix)@t_r
+        A = np.eye(self.num_states)-self.discount*new_t_matrix #num_states*num_states
+        b = np.sum(new_t_matrix*new_r_matrix,axis=-1) #num_states
+        try:
+            value = np.linalg.solve(A,b)
+        except:
+            value = np.linalg.lstsq(A,b,rcond=None)[0]
         return value
 
 
@@ -145,7 +141,6 @@ class MDP(object):
         """Get the optimum values and policy using howard policy iteration
         """
         old_policy = self.optimum_policy
-        # print(old_policy,file=sys.stderr)
         while(True):
             values = self.value_from_policy(old_policy)
             new_policy = self.policy_from_value(values)

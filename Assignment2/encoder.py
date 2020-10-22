@@ -39,7 +39,7 @@ class Maze(MDP):
         self.index_state_map[self.matrix==1] = -1
         self.start_state = self.index_state_map[self.matrix==2][0]
         self.end_states = self.index_state_map[self.matrix==3]
-        self.discount = 1
+        self.discount = 0.99
         self.mdptype = 'episodic'
         self.optimum_value = np.zeros(self.num_states)
         self.optimum_policy = np.zeros(self.num_states)
@@ -68,14 +68,15 @@ class Maze(MDP):
                 if i in self.end_states:
                     continue
                 x,y = self.state_index_map[i]
-                min_factor = max(1e-30,self.discount**self.num_states)
+                min_factor = max(1e-10,self.discount**(2*(self.rows+self.columns)))
+                min_factor = 1
                 max_factor = 1/min_factor
 
                 #West
                 if y>0 and self.matrix[x,y-1]!=1:
                     self.transition_matrix[i,3,self.index_state_map[x,y-1]] = 1
                     if self.index_state_map[x,y-1] in self.end_states:
-                        self.reward_matrix[i,3,self.index_state_map[x,y-1]] = max_factor*10000
+                        self.reward_matrix[i,3,self.index_state_map[x,y-1]] = max_factor*1e5
                     else:
                         self.reward_matrix[i,3,self.index_state_map[x,y-1]] = -1
                 else:
@@ -86,7 +87,7 @@ class Maze(MDP):
                 if y<self.columns-1 and self.matrix[x,y+1]!=1:
                     self.transition_matrix[i,1,self.index_state_map[x,y+1]] = 1
                     if self.index_state_map[x,y+1] in self.end_states:
-                        self.reward_matrix[i,1,self.index_state_map[x,y+1]] = max_factor*10000
+                        self.reward_matrix[i,1,self.index_state_map[x,y+1]] = max_factor*1e5
                     else:
                         self.reward_matrix[i,1,self.index_state_map[x,y+1]] = -1
                 else:
@@ -97,7 +98,7 @@ class Maze(MDP):
                 if x>0 and self.matrix[x-1,y]!=1:
                     self.transition_matrix[i,0,self.index_state_map[x-1,y]] = 1
                     if self.index_state_map[x-1,y] in self.end_states:
-                        self.reward_matrix[i,0,self.index_state_map[x-1,y]] = max_factor*10000
+                        self.reward_matrix[i,0,self.index_state_map[x-1,y]] = max_factor*1e5
                     else:
                         self.reward_matrix[i,0,self.index_state_map[x-1,y]] = -1
                 else:
@@ -108,7 +109,7 @@ class Maze(MDP):
                 if x<self.rows-1 and self.matrix[x+1,y]!=1:
                     self.transition_matrix[i,2,self.index_state_map[x+1,y]] = 1
                     if self.index_state_map[x+1,y] in self.end_states:
-                        self.reward_matrix[i,2,self.index_state_map[x+1,y]] = max_factor*10000
+                        self.reward_matrix[i,2,self.index_state_map[x+1,y]] = max_factor*1e5
                     else:
                         self.reward_matrix[i,2,self.index_state_map[x+1,y]] = -1
                 else:
