@@ -69,7 +69,6 @@ class Maze(MDP):
                     continue
                 x,y = self.state_index_map[i]
                 min_factor = max(1e-10,self.discount**(2*(self.rows+self.columns)))
-                min_factor = 1
                 max_factor = 1/min_factor
 
                 #West
