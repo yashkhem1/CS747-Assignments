@@ -31,32 +31,25 @@ class WindyGridworld(object):
     def pos_to_state(self,pos):
         return pos[0]*self.ncols + pos[1]
 
-    def check_pos(self,pos):
+    def move(self,pos,dx,dy):
         x,y = pos
-        if x < 0:
-            x = 0
-        elif x >= self.nrows:
-            x = self.nrows-1
-        if y < 0:
-            y = 0
-        elif y >= self.ncols:
-            y = self.ncols-1
-        
-        return (x,y)
+        if dx < 0:
+            if dy > 0:
+                return (max(0,x+dx),min(self.ncols-1,y+dy))
+            else:
+                return (max(0,x+dx),max(0,y+dy))
+        else:
+            if dy > 0:
+                return (min(self.nrows-1,x+dx),min(self.ncols-1,y+dy))
+            else:
+                return (min(self.nrows-1,x+dx),max(0,y+dy))
 
     def step(self,action):
         wind_change = self.winds[self.curr_pos[1]]
-        x_new = self.curr_pos[0] + self.dx[action] - wind_change
-        y_new = self.curr_pos[1] + self.dy[action]
         if self.stochastic and wind_change:
-            next_pos = (random.choice([x_new+1,x_new,x_new-1]),y_new)
-        else:
-            next_pos = (x_new,y_new)
-        next_pos = self.check_pos(next_pos)
-        self.curr_pos = next_pos
+            wind_change = np.random.choice([wind_change,wind_change-1,wind_change+1])
+        self.curr_pos = self.move(self.curr_pos,self.dx[action]-wind_change,self.dy[action])
         self.curr_state = self.pos_to_state(self.curr_pos)
-        print(action)
-        print(next_pos)
         if self.curr_pos == self.end_pos:
             return(self.curr_state,0)
         else:
