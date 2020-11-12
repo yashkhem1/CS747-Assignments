@@ -24,16 +24,19 @@ class Agent(object):
         self.seed = seed
         self.timesteps = []
         self.episodes = []
+        self.minimum_policy = []
     
 
     def sarsa(self):
         timestep = 0
         episode = 0
+        episode_policy = []
         curr_state = self.start_state
         if np.random.rand() < self.epsilon:
             action = np.random.randint(0,self.num_actions)
         else:
             action = np.argmax(self.q_matrix[curr_state])
+        episode_policy.append(action) #policy
         while timestep < self.num_timesteps:
             self.timesteps.append(timestep)
             self.episodes.append(episode)
@@ -42,11 +45,15 @@ class Agent(object):
                 self.q_matrix[curr_state,action] = self.q_matrix[curr_state,action] + self.lr*(reward - self.q_matrix[curr_state,action])
                 episode += 1
                 self.mdp.reset()
+                if len(self.minimum_policy) == 0 or len(self.minimum_policy) > len(episode_policy):
+                    self.minimum_policy = episode_policy
+                episode_policy = [] #policy
                 curr_state = self.start_state
                 if np.random.rand() < self.epsilon:
                     action = np.random.randint(0,self.num_actions)
                 else:
                     action = np.argmax(self.q_matrix[curr_state])
+                episode_policy.append(action) #policy
             else:
                 if np.random.rand() < self.epsilon:
                     next_action = np.random.randint(0,self.num_actions)
@@ -55,12 +62,14 @@ class Agent(object):
                 self.q_matrix[curr_state,action] = self.q_matrix[curr_state,action] + self.lr*(reward + self.q_matrix[next_state,next_action] - self.q_matrix[curr_state,action])
                 curr_state = next_state
                 action = next_action
+                episode_policy.append(action) #policy
             timestep+=1
 
 
     def expected_sarsa(self):
         timestep = 0
         episode = 0
+        episode_policy = []
         curr_state = self.start_state
         while timestep < self.num_timesteps:
             self.timesteps.append(timestep)
@@ -69,6 +78,7 @@ class Agent(object):
                 action = np.random.randint(0,self.num_actions)
             else:
                 action = np.argmax(self.q_matrix[curr_state])
+            episode_policy.append(action) #policy
             next_state,reward = self.mdp.step(action)
             expectation = (1-self.epsilon)*np.max(self.q_matrix[next_state]) + self.epsilon*np.mean(self.q_matrix[next_state])
             target = reward + expectation
@@ -76,6 +86,9 @@ class Agent(object):
             if next_state == self.end_state:
                 episode += 1
                 self.mdp.reset()
+                if len(self.minimum_policy) == 0 or len(self.minimum_policy) > len(episode_policy):
+                    self.minimum_policy = episode_policy
+                episode_policy = [] #policy
                 curr_state = self.start_state
             else:
                 curr_state = next_state
@@ -86,6 +99,7 @@ class Agent(object):
     def q_learning(self):
         timestep = 0
         episode = 0
+        episode_policy = []
         curr_state = self.start_state
         while timestep < self.num_timesteps:
             self.timesteps.append(timestep)
@@ -94,12 +108,16 @@ class Agent(object):
                 action = np.random.randint(0,self.num_actions)
             else:
                 action = np.argmax(self.q_matrix[curr_state])
+            episode_policy.append(action) #policy
             next_state,reward = self.mdp.step(action)
             target = reward + np.max(self.q_matrix[next_state])
             self.q_matrix[curr_state,action] = self.q_matrix[curr_state,action] + self.lr*(target - self.q_matrix[curr_state,action])
             if next_state == self.end_state:
                 episode += 1
                 self.mdp.reset()
+                if len(self.minimum_policy) == 0 or len(self.minimum_policy) > len(episode_policy):
+                    self.minimum_policy = episode_policy
+                episode_policy = [] #policy
                 curr_state = self.start_state
             else:
                 curr_state = next_state

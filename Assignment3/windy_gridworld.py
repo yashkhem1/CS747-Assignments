@@ -58,6 +58,16 @@ class WindyGridworld(object):
     def reset(self):
         self.curr_state = self.start_state
         self.curr_pos = self.start_pos
+
+    def get_visited_positions(self,policy):
+        self.reset()
+        positions = []
+        positions.append(self.curr_pos)
+        for action in policy:
+            self.step(action)
+            positions.append(self.curr_pos)
+        return positions
+
     
 
 
