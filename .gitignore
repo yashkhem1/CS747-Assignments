@@ -1,4 +1,8 @@
 *.pyc
 *.tar.gz
-cs747-pa1/submission/generated_data/*
-cs747-pa1/submission/submission/*
+Assignment1/submission/generated_data/*
+Assignment1/submission/submission/*
+Assignment2/*.txt
+Assignment2/*.png
+Assignment2/*.log
+Assignment3/*.png
