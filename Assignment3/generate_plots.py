@@ -28,6 +28,8 @@ def plot_heatmap(value,nrows,ncols,outfile,title):
     plt.title(title)
     plt.savefig(outfile)
 
+policy_map = np.array(['Up','Right','Down','Left','Up-Right','Down-Right','Up-Left','Down-Left'])
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -59,22 +61,25 @@ if __name__ == "__main__":
     algorithms_map = {'SARSA':'sarsa','Expected SARSA':'expected_sarsa','Q Learning':'q_learning'}
     for i,algorithm in enumerate(args.algorithms):
         episodes_array = []
+        value_fn = []
         for seed in range(args.seeds):
             mdp.reset()
             agent = Agent(algorithms_map[algorithm],mdp,seed,args.timesteps,args.epsilon,args.lr)
             agent.run()
             episodes_array.append(agent.episodes)
+            if args.heatmap:
+                value_fn.append(np.max(agent.q_matrix,axis=1))
         episodes_array = np.mean(np.array(episodes_array),axis=0)
         plt.plot(np.arange(args.timesteps),episodes_array,label=algorithm,color=args.colors[i])
         if args.min_policy:
             min_policy = agent.minimum_policy
-        if args.heatmap:
-            value_fn = np.max(agent.q_matrix,axis=1)
             # print(len(min_policy))
     plt.legend()
     plt.savefig(args.outfile)
     if args.min_policy:
+        print("Optimal Policy:", policy_map[min_policy])
         plot_path(mdp,min_policy,args.outfile[:-4]+'_path.png',"Shortest Path for "+args.title)
     if args.heatmap:
+        value_fn = np.mean(np.array(value_fn),axis=0).reshape(mdp.nrows,mdp.ncols)
         plot_heatmap(value_fn,mdp.nrows,mdp.ncols,args.outfile[:-4]+'_values.png',"Value Heatmap for "+args.title)
         
