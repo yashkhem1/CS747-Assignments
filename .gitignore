@@ -5,4 +5,5 @@ Assignment1/submission/submission/*
 Assignment2/*.txt
 Assignment2/*.png
 Assignment2/*.log
-Assignment3/*.png
+Assignment3/plots/*
+Assignment3/submission/*

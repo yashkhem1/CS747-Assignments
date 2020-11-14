@@ -1,0 +1,4 @@
+In order to obtain the plots run the following command:
+bash generate_all_plots.sh
+
+Details  are mentioned in the report.pdf file
